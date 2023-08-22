@@ -12,7 +12,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-
     env:
       DATABASE_ACCESS: ${{ secrets.DATABASE_ACCESS }}
 
