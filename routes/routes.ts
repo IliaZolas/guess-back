@@ -1,8 +1,6 @@
 import express, { Request, Response } from 'express';
 import { Router } from 'express';
 import newUserTemplateCopy from '../models/users';
-import newMealPlanTemplateCopy from '../models/mealplans';
-import MealPlans from '../models/mealplans';
 import Users from '../models/users';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -128,32 +126,32 @@ routes.put('/user/update/:id', auth, (req: Request, res: Response) => {
     ).then((data) => res.json(data));
     });
 
-routes.delete('/user/delete/:id', (req: Request, res: Response) => {
-    const userId = req.params.id;
-    console.log(userId, ':delete route');
+// routes.delete('/user/delete/:id', (req: Request, res: Response) => {
+//     const userId = req.params.id;
+//     console.log(userId, ':delete route');
     
-    Users.deleteOne({ _id: userId }, function (err: Error | null, _result: any) {
-        if (err) {
-        res.status(400).send(`Error deleting listing with id ${userId}!`);
-        } else {
-        console.log(`${userId} document deleted`);
-        }
-    });
+//     Users.deleteOne({ _id: userId }, function (err: Error | null, _result: any) {
+//         if (err) {
+//         res.status(400).send(`Error deleting listing with id ${userId}!`);
+//         } else {
+//         console.log(`${userId} document deleted`);
+//         }
+//     });
     
-    cloudinary.v2.config({
-        cloud_name: process.env.CLOUD_NAME,
-        api_key: process.env.CLOUD_API_KEY,
-        api_secret: process.env.CLOUD_API_SECRET,
-    });
+//     cloudinary.v2.config({
+//         cloud_name: process.env.CLOUD_NAME,
+//         api_key: process.env.CLOUD_API_KEY,
+//         api_secret: process.env.CLOUD_API_SECRET,
+//     });
     
-    const publicId = req.params.public_id;
-    console.log('cloudinary check public_id for delete:', publicId);
+//     const publicId = req.params.public_id;
+//     console.log('cloudinary check public_id for delete:', publicId);
     
-    cloudinary.v2.uploader
-        .destroy(publicId)
-        .then((result) => console.log('cloudinary delete', result))
-        .catch((_err) => console.log('Something went wrong, please try again later.'));
-    });
+//     cloudinary.v2.uploader
+//         .destroy(publicId)
+//         .then((result) => console.log('cloudinary delete', result))
+//         .catch((_err) => console.log('Something went wrong, please try again later.'));
+//     });
 
 
 

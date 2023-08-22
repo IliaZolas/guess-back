@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import routesUrls from './routes/routes';
 import cors, { CorsOptions } from 'cors';
 import bodyParser from 'body-parser';
-import { MongoClient } from 'mongodb';
+// import { MongoClient } from 'mongodb';
 
 dotenv.config();
 
@@ -35,7 +35,7 @@ mongoose
 // });
 
 const corsOptions: CorsOptions = {
-  origin: ['https://name-of-your.app', 'http://localhost:3000'],
+  origin: ['https://purple-hill-01d316503.3.azurestaticapps.net/', 'http://localhost:3000'],
   credentials: true,
 };
 
