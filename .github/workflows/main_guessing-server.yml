@@ -13,6 +13,13 @@ jobs:
   build:
     runs-on: windows-latest
 
+    env:
+      DATABASE_ACCESS: ${{ secrets.DATABASE_ACCESS }}
+      CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
+      CLOUD_NAME: ${{ secrets.CLOUD_NAME }}
+      CLOUD_API_KEY: ${{ secrets.CLOUD_API_KEY }}
+      CLOUD_API_SECRET: ${{ secrets.CLOUD_API_SECRET }}
+
     steps:
       - uses: actions/checkout@v2
 
