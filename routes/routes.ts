@@ -5,10 +5,14 @@ import Users from '../models/users';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import auth from './auth';
-import cloudinary from 'cloudinary';
+// import cloudinary from 'cloudinary';
+import cors from 'cors';
 import {gameLogic} from '../game-logic/game'
 
 const routes: Router = express.Router();
+
+// Use cors middleware for all routes
+routes.use(cors());
 
 // Index Routes
 routes.get('/', (req: Request, res: Response) => {
@@ -36,21 +40,21 @@ bcrypt
         message: 'User Created Successfully',
         result,
         });
+        })
+        .catch((error) => {
+            console.log(error),
+            res.status(500).send({
+            message: 'Error creating user',
+            error,
+            });
+        });
     })
-    .catch((error) => {
-        console.log(error),
+    .catch((e) => {
         res.status(500).send({
-        message: 'Error creating user',
-        error,
+        message: 'Password was not hashed successfully',
+        e,
         });
     });
-})
-.catch((e) => {
-    res.status(500).send({
-    message: 'Password was not hashed successfully',
-    e,
-    });
-});
 });
 
 routes.post('/login', (req: Request, res: Response) => {
