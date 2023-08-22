@@ -4,12 +4,17 @@ import dotenv from 'dotenv';
 import routesUrls from './routes/routes';
 import cors, { CorsOptions } from 'cors';
 import bodyParser from 'body-parser';
-// import { MongoClient } from 'mongodb';
 
 dotenv.config();
 
 const app: Express = express();
 const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 4000;
+console.log("port:",PORT)
+
+// Health check route
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
 mongoose
   .connect(process.env.DATABASE_ACCESS || '')
@@ -19,20 +24,6 @@ mongoose
   .catch((error) => {
     console.error('Error connecting to MongoDB:', error);
   });
-
-// const connectionString = `${process.env.DATABASE_ACCESS}`;
-
-// const mongoClient = new MongoClient(connectionString);
-
-// mongoClient.connect();
-
-// mongoClient.on('open', () => {
-//   console.log('Connected to MongoDB');
-// });
-
-// mongoClient.on('error', (err) => {
-//   console.error('Error connecting to MongoDB:', err);
-// });
 
 const corsOptions: CorsOptions = {
   origin: ['https://purple-hill-01d316503.3.azurestaticapps.net/', 'http://localhost:3000'],

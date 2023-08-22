@@ -2,15 +2,14 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.ts",
+  "main": "index.js",
   "engines": {
     "node": "16.x"
   },
   "scripts": {
-    "start": "node index.ts"
+    "start": "nodemon index.ts"
   },
   "author": "",
-  "type": "module",
   "license": "ISC",
   "dependencies": {
     "@types/mongoose": "^5.11.97",
