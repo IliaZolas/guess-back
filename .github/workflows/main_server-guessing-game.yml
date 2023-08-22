@@ -27,6 +27,9 @@ jobs:
           npm run build --if-present
           npm run test --if-present
 
+      - name: Compile TypeScript
+        run: npm run build
+
       - name: Zip artifact for deployment
         run: zip release.zip ./*
 
