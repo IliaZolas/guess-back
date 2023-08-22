@@ -3,10 +3,6 @@
 
 name: Build and deploy Node.js app to Azure Web App - guessing-server
 
-
-env:
-  DATABASE_ACCESS: ${{ secrets.DATABASE_ACCESS }}
-
 on:
   push:
     branches:
