@@ -24,6 +24,25 @@ const routes = express_1.default.Router();
 routes.get('/', (req, res) => {
     res.send('Hello world');
 });
+// Route to check authentication status 
+routes.get('/check-auth', (req, res) => {
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+        return res.status(401).json({ authenticated: false });
+    }
+    jsonwebtoken_1.default.verify(accessToken, 'accessTokenSecret', (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ authenticated: false });
+        }
+        const userId = decoded.userId;
+        const userEmail = decoded.userEmail;
+        res.status(200).json({
+            authenticated: true,
+            userId: userId,
+            userEmail: userEmail,
+        });
+    });
+});
 // User Routes
 routes.post('/signup', (req, res) => {
     bcrypt_1.default
@@ -75,19 +94,47 @@ routes.post('/login', (req, res) => {
             .compare(req.body.password, user.password)
             .then((passwordCheck) => {
             console.log('password check object:', passwordCheck);
-            if (!passwordCheck) {
-                console.log('No password provided');
+            if (passwordCheck === false) {
+                console.log('No password provided or wrong password');
+                res.status(200).send({
+                    message: 'Login Failed',
+                    email: user.email,
+                    userId: user._id,
+                    passwordCheck
+                });
             }
-            const token = jsonwebtoken_1.default.sign({
-                userId: user._id,
-                userEmail: user.email,
-            }, 'RANDOM-TOKEN', { expiresIn: '24h' });
-            res.status(200).send({
-                message: 'Login Successful',
-                email: user.email,
-                userId: user._id,
-                token,
-            });
+            else {
+                const refreshToken = jsonwebtoken_1.default.sign({
+                    userId: user._id,
+                    userEmail: user.email,
+                }, 'refreshTokenSecret', { expiresIn: '7d' });
+                const accessToken = jsonwebtoken_1.default.sign({
+                    userId: user._id,
+                    userEmail: user.email,
+                    refreshToken: refreshToken,
+                }, 'accessTokenSecret', { expiresIn: '24h' });
+                console.log("login route: token ->", accessToken);
+                console.log("Login route: refreshToken ->", refreshToken);
+                res.cookie("accessToken", accessToken, {
+                    httpOnly: true,
+                    sameSite: "none",
+                    secure: true,
+                    maxAge: 300000,
+                });
+                res.cookie("refreshToken", refreshToken, {
+                    httpOnly: true,
+                    sameSite: "none",
+                    secure: true,
+                    maxAge: 300000,
+                });
+                res.status(200).send({
+                    message: 'Login Successful',
+                    email: user.email,
+                    userId: user._id,
+                    accessToken,
+                    refreshToken
+                });
+            }
         })
             .catch((error) => {
             res.status(400).send({
@@ -103,11 +150,20 @@ routes.post('/login', (req, res) => {
         });
     });
 });
-routes.get('/user/show/:id', (req, res) => {
+routes.get('/user/show/:id', auth_1.default, (req, res) => {
+    // const accessToken = req.cookies.accessToken;
+    // if (!accessToken) {
+    //     return res.status(401).json({ authenticated: false });
+    // }
+    // jwt.verify(accessToken, 'accessTokenSecret', async (err: any, decoded: any) => {
+    //     if (err) {
+    //         return res.status(403).json({ authenticated: false });
+    //     }
     const userId = req.params.id;
-    console.log('GET SINGLE USER RECORD:', userId);
+    console.log('User show has been triggered:', userId);
     users_2.default.findOne({ _id: userId }).then((data) => res.json(data));
 });
+// });
 routes.put('/user/update/:id', auth_1.default, (req, res) => {
     const userId = req.params.id;
     console.log('update user id route', userId);
@@ -119,30 +175,23 @@ routes.put('/user/update/:id', auth_1.default, (req, res) => {
         public_id: req.body.publicId,
     }).then((data) => res.json(data));
 });
-// routes.delete('/user/delete/:id', (req: Request, res: Response) => {
-//     const userId = req.params.id;
-//     console.log(userId, ':delete route');
-//     Users.deleteOne({ _id: userId }, function (err: Error | null, _result: any) {
-//         if (err) {
-//         res.status(400).send(`Error deleting listing with id ${userId}!`);
-//         } else {
-//         console.log(`${userId} document deleted`);
-//         }
-//     });
-//     cloudinary.v2.config({
-//         cloud_name: process.env.CLOUD_NAME,
-//         api_key: process.env.CLOUD_API_KEY,
-//         api_secret: process.env.CLOUD_API_SECRET,
-//     });
-//     const publicId = req.params.public_id;
-//     console.log('cloudinary check public_id for delete:', publicId);
-//     cloudinary.v2.uploader
-//         .destroy(publicId)
-//         .then((result) => console.log('cloudinary delete', result))
-//         .catch((_err) => console.log('Something went wrong, please try again later.'));
-//     });
-// Game routes
-routes.get('/start-the-game', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+routes.post('/logout', (req, res) => {
+    console.log("tried to logout");
+    res.clearCookie('accessToken', { httpOnly: true, sameSite: 'none', secure: true, path: '/' });
+    res.clearCookie('refreshToken', { httpOnly: true, sameSite: 'none', secure: true, path: '/' });
+    res.status(200).json({ message: 'Logout successful' });
+});
+// Game routes 
+routes.get('/start-the-game', auth_1.default, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // const accessToken = req.cookies.accessToken;
+    // // console.log("start the game access token? -->",accessToken)
+    // if (!accessToken) {
+    //     return res.status(401).json({ authenticated: false });
+    // }
+    // jwt.verify(accessToken, 'accessTokenSecret', async (err: any, decoded: any) => {
+    //     if (err) {
+    //         return res.status(403).json({ authenticated: false });
+    //     }
     try {
         yield (0, game_1.gameLogic)(req, res);
     }
@@ -151,4 +200,19 @@ routes.get('/start-the-game', (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.status(500).json({ error: errorMessage });
     }
 }));
+routes.post('/check-guess', (req, res) => {
+    const userGuess = req.body.guess;
+    const gameNumber = req.body.gameNumber;
+    console.log("this is the guessed number", userGuess);
+    console.log("this is the game number", gameNumber);
+    if (userGuess === gameNumber) {
+        res.json({ result: 'success' });
+    }
+    else if (userGuess < gameNumber) {
+        res.json({ result: 'low' });
+    }
+    else {
+        res.json({ result: 'high' });
+    }
+});
 exports.default = routes;

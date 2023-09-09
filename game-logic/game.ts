@@ -1,4 +1,3 @@
-
 export async function gameLogic (req: any, res: any) {
     const min = 1; 
     const max = 100;

@@ -15,17 +15,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const token = req.headers.authorization;
+        let token = req.cookies.accessToken;
+        console.log("auth token:", token);
         if (!token) {
             throw new Error("No token provided");
         }
-        const decodedToken = jsonwebtoken_1.default.verify(token, "RANDOM-TOKEN");
+        const decodedToken = jsonwebtoken_1.default.verify(token, "accessTokenSecret");
         const user = decodedToken;
         req.user = user;
         next();
     }
     catch (error) {
-        res.status(401).json({
+        res.status(403).json({
             error: new Error("Invalid request!"),
         });
     }

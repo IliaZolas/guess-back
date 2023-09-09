@@ -4,20 +4,40 @@ import newUserTemplateCopy from '../models/users';
 import Users from '../models/users';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import auth from './auth';
-// import cloudinary from 'cloudinary';
-import cors from 'cors';
+import authMiddleware from './auth';
 import {gameLogic} from '../game-logic/game'
 
 const routes: Router = express.Router();
 
-// Use cors middleware for all routes
-routes.use(cors());
-
 // Index Routes
 routes.get('/', (req: Request, res: Response) => {
-res.send('Hello world');
-});
+        res.send('Hello world');
+    });
+
+// Route to check authentication status 
+routes.get('/check-auth', (req: Request, res: Response) => {
+    const accessToken = req.cookies.accessToken;
+    
+        if (!accessToken) {
+            return res.status(401).json({ authenticated: false });
+            }
+            
+            jwt.verify(accessToken, 'accessTokenSecret', (err: any, decoded: any) => {
+            if (err) {
+                return res.status(403).json({ authenticated: false });
+            }
+        
+            const userId = decoded.userId;
+            const userEmail = decoded.userEmail;
+
+            res.status(200).json({
+                authenticated: true,
+                userId: userId,
+                userEmail: userEmail,
+            });
+        });
+    });
+
 
 // User Routes
 routes.post('/signup', (req: Request, res: Response) => {
@@ -63,6 +83,7 @@ routes.post('/login', (req: Request, res: Response) => {
     Users.findOne({ email: req.body.email })
         .then((user) => {
         console.log('user object:', user);
+
         if (!user) {
             res.status(404).send({
             message: 'Email not found',
@@ -74,23 +95,60 @@ routes.post('/login', (req: Request, res: Response) => {
             .compare(req.body.password, user.password)
             .then((passwordCheck) => {
             console.log('password check object:', passwordCheck);
-            if (!passwordCheck) {
-                console.log('No password provided');
+
+            if (passwordCheck === false) {
+                console.log('No password provided or wrong password');
+                res.status(200).send({
+                    message: 'Login Failed',
+                    email: user.email,
+                    userId: user._id,
+                    passwordCheck
+                });
+            } else {
+
+                const refreshToken = jwt.sign(
+                    {
+                        userId: user._id,
+                        userEmail: user.email,
+                    },
+                    'refreshTokenSecret',
+                    { expiresIn: '7d' } 
+                );
+
+                const accessToken = jwt.sign(
+                    {
+                        userId: user._id,
+                        userEmail: user.email,
+                        refreshToken: refreshToken,
+                    },
+                    'accessTokenSecret',
+                    { expiresIn: '24h' }
+                );
+                console.log("login route: token ->",accessToken)
+                console.log("Login route: refreshToken ->",refreshToken)
+                
+                res.cookie("accessToken", accessToken, {
+                    httpOnly: true, 
+                    sameSite: "none",
+                    secure: true, 
+                    maxAge: 300000,
+                });
+                
+                res.cookie("refreshToken", refreshToken, {
+                    httpOnly: true,
+                    sameSite: "none",
+                    secure: true,
+                    maxAge: 300000,
+                });
+                
+                res.status(200).send({
+                    message: 'Login Successful',
+                    email: user.email,
+                    userId: user._id,
+                    accessToken,
+                    refreshToken
+                });
             }
-            const token = jwt.sign(
-                {
-                userId: user._id,
-                userEmail: user.email,
-                },
-                'RANDOM-TOKEN',
-                { expiresIn: '24h' }
-            );
-            res.status(200).send({
-                message: 'Login Successful',
-                email: user.email,
-                userId: user._id,
-                token,
-            });
             })
             .catch((error) => {
             res.status(400).send({
@@ -107,14 +165,26 @@ routes.post('/login', (req: Request, res: Response) => {
         });
     });  
 
-routes.get('/user/show/:id', (req: Request, res: Response) => {
-    const userId = req.params.id;
-    console.log('GET SINGLE USER RECORD:', userId);
+routes.get('/user/show/:id', authMiddleware, (req: Request, res: Response) => {
+    // const accessToken = req.cookies.accessToken;
 
-    Users.findOne({ _id: userId }).then((data) => res.json(data));
-    });
+    // if (!accessToken) {
+    //     return res.status(401).json({ authenticated: false });
+    // }
 
-routes.put('/user/update/:id', auth, (req: Request, res: Response) => {
+    // jwt.verify(accessToken, 'accessTokenSecret', async (err: any, decoded: any) => {
+    //     if (err) {
+    //         return res.status(403).json({ authenticated: false });
+    //     }
+    
+        const userId = req.params.id;
+        console.log('User show has been triggered:', userId);
+
+        Users.findOne({ _id: userId }).then((data) => res.json(data));
+        });
+    // });
+
+routes.put('/user/update/:id', authMiddleware, (req: Request, res: Response) => {
     const userId = req.params.id;
     console.log('update user id route', userId);
 
@@ -130,43 +200,48 @@ routes.put('/user/update/:id', auth, (req: Request, res: Response) => {
     ).then((data) => res.json(data));
     });
 
-// routes.delete('/user/delete/:id', (req: Request, res: Response) => {
-//     const userId = req.params.id;
-//     console.log(userId, ':delete route');
-    
-//     Users.deleteOne({ _id: userId }, function (err: Error | null, _result: any) {
-//         if (err) {
-//         res.status(400).send(`Error deleting listing with id ${userId}!`);
-//         } else {
-//         console.log(`${userId} document deleted`);
-//         }
-//     });
-    
-//     cloudinary.v2.config({
-//         cloud_name: process.env.CLOUD_NAME,
-//         api_key: process.env.CLOUD_API_KEY,
-//         api_secret: process.env.CLOUD_API_SECRET,
-//     });
-    
-//     const publicId = req.params.public_id;
-//     console.log('cloudinary check public_id for delete:', publicId);
-    
-//     cloudinary.v2.uploader
-//         .destroy(publicId)
-//         .then((result) => console.log('cloudinary delete', result))
-//         .catch((_err) => console.log('Something went wrong, please try again later.'));
-//     });
+routes.post('/logout', (req, res) => {
+    console.log("tried to logout")
+    res.clearCookie('accessToken', { httpOnly: true, sameSite: 'none', secure: true, path: '/' });
+    res.clearCookie('refreshToken', { httpOnly: true, sameSite: 'none', secure: true, path: '/' });
+    res.status(200).json({ message: 'Logout successful' });
+});
 
+// Game routes 
 
+routes.get('/start-the-game', authMiddleware, async (req: Request, res: Response) => {
+    // const accessToken = req.cookies.accessToken;
+    // // console.log("start the game access token? -->",accessToken)
 
-// Game routes
+    // if (!accessToken) {
+    //     return res.status(401).json({ authenticated: false });
+    // }
 
-routes.get('/start-the-game', async (req: Request, res: Response) => {
-    try {
-        await gameLogic(req, res);
-    } catch (error) {
-        const errorMessage = (error as Error).message;
-        res.status(500).json({ error: errorMessage });
+    // jwt.verify(accessToken, 'accessTokenSecret', async (err: any, decoded: any) => {
+    //     if (err) {
+    //         return res.status(403).json({ authenticated: false });
+    //     }
+
+        try {
+            await gameLogic(req, res);
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            res.status(500).json({ error: errorMessage });
+        }
+});
+
+routes.post('/check-guess', (req: Request, res: Response) => {
+    const userGuess = req.body.guess;
+    const gameNumber = req.body.gameNumber
+    console.log("this is the guessed number", userGuess )
+    console.log("this is the game number", gameNumber )
+
+    if (userGuess === gameNumber) {
+        res.json({ result: 'success' });
+    } else if (userGuess < gameNumber) {
+        res.json({ result: 'low' });
+    } else {
+        res.json({ result: 'high' });
     }
 });
 
