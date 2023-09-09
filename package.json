@@ -7,9 +7,9 @@
     "node": "16.x"
   },
   "scripts": {
-    "start": "node index.js",
+    "start": "NODE_ENV=production node index.js",
     "build": "tsc",
-    "dev": "nodemon index.ts"
+    "dev": "NODE_ENV=development nodemon index.ts"
   },
   "author": "",
   "license": "ISC",

@@ -30,16 +30,36 @@ const corsOptions: CorsOptions = {
   exposedHeaders: ['Authorization' ] 
 };
 
-const httpsOptions = {
-  key: fs.readFileSync('../localhost.key'),
-  cert: fs.readFileSync('../localhost.crt'),
-};
 
-const httpsServer = https.createServer(httpsOptions, app);
+if (process.env.NODE_ENV === 'development') {
+  // Development mode, use HTTP server
+  const httpsOptions = {
+    key: fs.readFileSync('../localhost.key'),
+    cert: fs.readFileSync('../localhost.crt'),
+  };
 
-httpsServer.listen(PORT, () => {
-  console.log(`Server is running on HTTPS at https://localhost:${PORT}`);
-});
+  const httpsServer = https.createServer(httpsOptions, app);
+
+  httpsServer.listen(PORT, () => {
+    console.log(`Server is running on HTTPS at https://localhost:${PORT}`);
+  });
+} else {
+  // Production mode, use HTTPS server
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
+
+// const httpsOptions = {
+//   key: fs.readFileSync('../localhost.key'),
+//   cert: fs.readFileSync('../localhost.crt'),
+// };
+
+// const httpsServer = https.createServer(httpsOptions, app);
+
+// httpsServer.listen(PORT, () => {
+//   console.log(`Server is running on HTTPS at https://localhost:${PORT}`);
+// });
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
